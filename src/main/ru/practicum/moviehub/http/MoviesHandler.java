@@ -38,16 +38,14 @@ public class MoviesHandler extends BaseHttpHandler {
 
                 if (queryString != null && !queryString.isEmpty()) {
 
-                    String yearParam = extractQueryParam(queryString, "year");
+                    String yearParam = extractQueryParam(queryString);
 
                     if (yearParam != null) {
 
                         try {
                             int targetYear = Integer.parseInt(yearParam);
 
-                            moviesToReturn = store.getAllMovies().stream()
-                                    .filter(m -> m.getYear() == targetYear)
-                                    .toList();
+                            moviesToReturn = store.getAllMovies().stream().filter(m -> m.getYear() == targetYear).toList();
 
                         } catch (NumberFormatException e) {
 
@@ -65,9 +63,7 @@ public class MoviesHandler extends BaseHttpHandler {
 
                 String json = gson.toJson(moviesToReturn);
                 sendJson(ex, 200, json);
-            }
-
-            else if (path.startsWith("/movies/") && path.length() > "/movies/".length()) {
+            } else if (path.startsWith("/movies/") && path.length() > "/movies/".length()) {
                 String idString = path.substring("/movies/".length());
 
                 try {
@@ -88,9 +84,7 @@ public class MoviesHandler extends BaseHttpHandler {
 
                     sendError(ex, 400, "Некорректный формат ID: должно быть число");
                 }
-            }
-
-            else {
+            } else {
                 sendJson(ex, 404, "[]");
             }
         } else if (method.equalsIgnoreCase("POST")) {
@@ -177,8 +171,7 @@ public class MoviesHandler extends BaseHttpHandler {
             } else {
                 sendError(ex, 404, "Неверный путь для удаления");
             }
-        }
-        else {
+        } else {
             sendJson(ex, 405, "[]");
         }
     }
@@ -188,10 +181,9 @@ public class MoviesHandler extends BaseHttpHandler {
     }
 
     private void sendError(HttpExchange ex, int statusCode, String message, String details) throws IOException {
-        // Создаём наш красивый DTO
+
         ErrorResponse errorResponse = new ErrorResponse(message, statusCode, details);
 
-        // Gson сам превратит объект в JSON: {"error": "...", "code": 400, "details": "..."}
         String json = gson.toJson(errorResponse);
         byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
 
@@ -207,7 +199,7 @@ public class MoviesHandler extends BaseHttpHandler {
         }
     }
 
-    private String extractQueryParam(String queryString, String paramName) {
+    private String extractQueryParam(String queryString) {
 
         String[] pairs = queryString.split("&");
 
@@ -218,12 +210,11 @@ public class MoviesHandler extends BaseHttpHandler {
                 String key = pair.substring(0, idx);
                 String value = pair.substring(idx + 1);
 
-                if (key.equalsIgnoreCase(paramName)) {
+                if (key.equalsIgnoreCase("year")) {
                     return value;
                 }
             }
         }
         return null;
     }
-
 }
