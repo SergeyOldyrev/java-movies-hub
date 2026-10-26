@@ -39,6 +39,7 @@ public class Movie {
                 ", year=" + year +
                 '}';
     }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -46,12 +47,13 @@ public class Movie {
         Movie movie = (Movie) o;
         return id == movie.id;
     }
+
     @Override
     public int hashCode() {
         return Objects.hash(id);
     }
 
-   public void setId(int id) {
+    public void setId(int id) {
         this.id = id;
     }
 
