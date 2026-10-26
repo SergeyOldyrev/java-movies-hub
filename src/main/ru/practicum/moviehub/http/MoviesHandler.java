@@ -2,6 +2,7 @@ package ru.practicum.moviehub.http;
 
 import com.google.gson.Gson;
 import com.sun.net.httpserver.Headers;
+import ru.practicum.moviehub.api.ErrorResponse;
 import ru.practicum.moviehub.model.Movie;
 import ru.practicum.moviehub.store.MoviesStore;
 
@@ -50,7 +51,7 @@ public class MoviesHandler extends BaseHttpHandler {
 
                         } catch (NumberFormatException e) {
 
-                            sendError(ex, 400, "Параметр 'year' должен быть целым числом");
+                            sendError(ex, 400, "Параметр 'year' должен быть числом", yearParam);
                             return;
                         }
                     } else {
@@ -187,15 +188,11 @@ public class MoviesHandler extends BaseHttpHandler {
     }
 
     private void sendError(HttpExchange ex, int statusCode, String message, String details) throws IOException {
+        // Создаём наш красивый DTO
+        ErrorResponse errorResponse = new ErrorResponse(message, statusCode, details);
 
-        java.util.Map<String, Object> errorBody = new java.util.HashMap<>();
-        errorBody.put("error", message);
-
-        if (details != null && !details.isEmpty()) {
-            errorBody.put("details", details);
-        }
-
-        String json = gson.toJson(errorBody);
+        // Gson сам превратит объект в JSON: {"error": "...", "code": 400, "details": "..."}
+        String json = gson.toJson(errorResponse);
         byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
 
         Headers headers = ex.getResponseHeaders();

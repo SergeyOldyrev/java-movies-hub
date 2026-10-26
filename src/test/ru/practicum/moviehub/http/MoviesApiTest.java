@@ -1,12 +1,16 @@
 package ru.practicum.moviehub.http;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import ru.practicum.moviehub.api.ErrorResponse;
 import ru.practicum.moviehub.model.Movie;
 import ru.practicum.moviehub.store.MoviesStore;
 
+import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -100,8 +104,7 @@ public class MoviesApiTest {
                 "Content-Type должен содержать формат данных и кодировку");
 
         String body = resp.body().trim();
-        assertTrue(body.equals("[{\"id\":1,\"title\":\"bruh\",\"year\":1984}]"),
-                "Ожидается JSON-массив");
+        assertEquals("[{\"id\":1,\"title\":\"bruh\",\"year\":1984}]", body, "Ожидается JSON-массив");
     }
 
     @Test
@@ -149,7 +152,6 @@ public class MoviesApiTest {
         assertEquals("The Dark Knight", savedMovie.getTitle(), "Название должно совпадать с отправленным");
         assertEquals(2008, savedMovie.getYear(), "Год должен совпадать с отправленным");
 
-        assertNotNull(savedMovie.getId(), "У фильма должен быть ID");
         assertTrue(savedMovie.getId() > 0, "ID должен быть положительным числом");
     }
 
@@ -230,6 +232,47 @@ public class MoviesApiTest {
 
         assertEquals(0, moviesStore.getAllMovies().size(),
                 "Фильм с слишком длинным названием не должен быть добавлен в хранилище");
+    }
+    @Test
+    void getMovies_filteredByYear_returnsStructuredError() throws Exception {
+
+        MoviesStore moviesStore = new MoviesStore();
+        MoviesServer server = new MoviesServer(moviesStore);
+        server.start();
+
+        HttpClient client = HttpClient.newBuilder().build();
+
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:8080/movies?year=abc"))
+                .GET()
+                .build();
+
+        HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        server.stop();
+
+        assertEquals(400, resp.statusCode(), "Сервер должен вернуть 400 Bad Request");
+
+        String contentType = resp.headers().firstValue("Content-Type").orElse("");
+        assertTrue(contentType.startsWith("application/json"),
+                "Ответ должен иметь Content-Type: application/json");
+
+        Type errorType = new TypeToken<ErrorResponse>(){}.getType();
+        Gson gson = new Gson();
+        ErrorResponse errorResponse = gson.fromJson(resp.body(), errorType);
+
+        assertNotNull(errorResponse, "Тело ответа должно быть распаршено в объект ErrorResponse");
+
+        assertEquals("Параметр 'year' должен быть числом", errorResponse.getError(),
+                "Поле 'error' должно содержать понятное сообщение для пользователя");
+
+        assertEquals(400, errorResponse.getCode(),
+                "Поле 'code' должно совпадать с HTTP статусом");
+
+        assertNotNull(errorResponse.getDetails(), "Поле 'details' не должно быть null");
+        assertTrue(errorResponse.getDetails().contains("abc"),
+                "Поле 'details' должно содержать значение, которое прислал клиент ('abc')");
+
+        System.out.println("✅ Тест пройден! Структура ошибки верна: " + resp.body());
     }
 
     @Test
