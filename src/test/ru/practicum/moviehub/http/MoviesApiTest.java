@@ -114,12 +114,7 @@ public class MoviesApiTest {
         MoviesServer server = new MoviesServer(moviesStore);
         server.start();
 
-        String jsonBody = """
-                {
-                    "title": "The Dark Knight",
-                    "year": 2008
-                }
-                """;
+        String jsonBody = "{\"title\": \"The Dark Knight\", \"year\": 2008}";
 
         HttpClient client = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(2))
@@ -162,12 +157,7 @@ public class MoviesApiTest {
         MoviesServer server = new MoviesServer(moviesStore);
         server.start();
 
-        String jsonBody = """
-                {
-                    "title": "",
-                    "year": 2023
-                }
-                """;
+        String jsonBody = "{\"title\": \"\", \"year\": 2023}";
 
         HttpClient client = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(2))
@@ -202,12 +192,7 @@ public class MoviesApiTest {
 
         String longTitle = "A".repeat(101);
 
-        String jsonBody = String.format("""
-                {
-                    "title": "%s",
-                    "year": 2023
-                }
-                """, longTitle);
+        String jsonBody = String.format("{\"title\": \"%s\", \"year\": 2023}", longTitle);
 
         HttpClient client = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(2))
@@ -233,6 +218,7 @@ public class MoviesApiTest {
         assertEquals(0, moviesStore.getAllMovies().size(),
                 "Фильм с слишком длинным названием не должен быть добавлен в хранилище");
     }
+
     @Test
     void getMovies_filteredByYear_returnsStructuredError() throws Exception {
 
@@ -256,7 +242,8 @@ public class MoviesApiTest {
         assertTrue(contentType.startsWith("application/json"),
                 "Ответ должен иметь Content-Type: application/json");
 
-        Type errorType = new TypeToken<ErrorResponse>(){}.getType();
+        Type errorType = new TypeToken<ErrorResponse>() {
+        }.getType();
         Gson gson = new Gson();
         ErrorResponse errorResponse = gson.fromJson(resp.body(), errorType);
 
@@ -286,12 +273,7 @@ public class MoviesApiTest {
                 .connectTimeout(Duration.ofSeconds(2))
                 .build();
 
-        String jsonOld = """
-                {
-                    "title": "Old Movie",
-                    "year": 1800
-                }
-                """;
+        String jsonOld = "{\"title\": \"Old Movie\", \"year\": 1800}";
 
         HttpRequest reqOld = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:8080/movies"))
@@ -307,12 +289,7 @@ public class MoviesApiTest {
         assertEquals(0, moviesStore.getAllMovies().size(), "Фильм не должен сохраниться");
 
         int futureYear = java.time.Year.now().getValue() + 2;
-        String jsonFuture = String.format("""
-                {
-                    "title": "Future Movie",
-                    "year": %d
-                }
-                """, futureYear);
+        String jsonFuture = String.format("{\"title\": \"Future Movie\", \"year\": %d}", futureYear);
 
         HttpRequest reqFuture = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:8080/movies"))
@@ -344,13 +321,7 @@ public class MoviesApiTest {
                 .build();
 
 
-        String jsonBody = """
-                {
-                    "title": "Good Movie",
-                    "year": 2020
-                }
-                """;
-
+        String jsonBody = "{\"title\": \"Good Movie\", \"year\": 2020}";
         HttpRequest req = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:8080/movies"))
                 .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
