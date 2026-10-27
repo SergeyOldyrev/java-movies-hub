@@ -1,7 +1,6 @@
 package ru.practicum.moviehub.http;
 
 import com.google.gson.Gson;
-import com.sun.net.httpserver.Headers;
 import ru.practicum.moviehub.api.ErrorResponse;
 import ru.practicum.moviehub.model.Movie;
 import ru.practicum.moviehub.store.MoviesStore;
@@ -9,7 +8,6 @@ import ru.practicum.moviehub.store.MoviesStore;
 import com.sun.net.httpserver.HttpExchange;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
@@ -63,7 +61,9 @@ public class MoviesHandler extends BaseHttpHandler {
 
                 String json = gson.toJson(moviesToReturn);
                 sendJson(ex, 200, json);
+
             } else if (path.startsWith("/movies/") && path.length() > "/movies/".length()) {
+
                 String idString = path.substring("/movies/".length());
 
                 try {
@@ -92,22 +92,31 @@ public class MoviesHandler extends BaseHttpHandler {
 
             if (path.equals("/movies")) {
 
-                Headers requestHeaders = ex.getRequestHeaders();
+                String contentType = ex.getRequestHeaders().getFirst("Content-Type");
 
-                String contentType = requestHeaders.getFirst("Content-Type");
+                if (!isValidJsonContentType(contentType)) {
 
-                if (contentType == null || !contentType.contains("application/json")) {
-                    sendError(ex, 415, "Требуется заголовок Content-Type: application/json");
+                    ErrorResponse errorBody = new ErrorResponse("Invalid Content-Type. Expected application/json");
+
+                    String json = gson.toJson(errorBody);
+
+                    sendJson(ex, 415, json);
                     return;
                 }
                 try {
 
                     String jsonBody;
+
                     try (var inputStream = ex.getRequestBody()) {
                         jsonBody = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
                     }
 
                     Movie newMovie = gson.fromJson(jsonBody, Movie.class);
+
+                    if (newMovie == null) {
+                        sendError(ex, 400, "Тело запроса отсутствует или некорректно");
+                        return;
+                    }
 
                     if (newMovie.getTitle() == null || newMovie.getTitle().isBlank()) {
                         sendError(ex, 400, "Название фильма обязательно");
@@ -130,13 +139,14 @@ public class MoviesHandler extends BaseHttpHandler {
                         return;
                     }
 
-                    List<Movie> allMovies = store.getAllMovies();
-                    int nextId = allMovies.isEmpty() ? 1 : allMovies.get(allMovies.size() - 1).getId() + 1;
+                    int nextId = store.getNextId();
+
                     newMovie.setId(nextId);
 
                     store.addMovie(newMovie);
 
                     String responseJson = gson.toJson(newMovie);
+
                     sendJson(ex, 201, responseJson);
 
                 } catch (com.google.gson.JsonSyntaxException e) {
@@ -176,29 +186,6 @@ public class MoviesHandler extends BaseHttpHandler {
         }
     }
 
-    private void sendError(HttpExchange ex, int statusCode, String message) throws IOException {
-        sendError(ex, statusCode, message, null);
-    }
-
-    private void sendError(HttpExchange ex, int statusCode, String message, String details) throws IOException {
-
-        ErrorResponse errorResponse = new ErrorResponse(message, statusCode, details);
-
-        String json = gson.toJson(errorResponse);
-        byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
-
-        Headers headers = ex.getResponseHeaders();
-        headers.set("Content-Type", "application/json; charset=UTF-8");
-
-        ex.sendResponseHeaders(statusCode, bytes.length);
-
-        try (OutputStream os = ex.getResponseBody()) {
-            os.write(bytes);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
     private String extractQueryParam(String queryString) {
 
         String[] pairs = queryString.split("&");
@@ -217,4 +204,20 @@ public class MoviesHandler extends BaseHttpHandler {
         }
         return null;
     }
+
+    private boolean isValidJsonContentType(String contentType) {
+        if (contentType == null) {
+            return false;
+        }
+
+        String normalized = contentType.toLowerCase();
+
+        String mainType = normalized.split(";", 2)[0].trim();
+
+        return mainType.equals("application/json");
+    }
 }
+
+
+
+

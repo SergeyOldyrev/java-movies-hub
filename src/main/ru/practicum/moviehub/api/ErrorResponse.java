@@ -12,7 +12,12 @@ public class ErrorResponse {
     }
 
     public ErrorResponse(String error, int code) {
+
         this(error, code, null);
+    }
+
+    public ErrorResponse(String error) {
+        this(error, 400);
     }
 
     public String getError() {
