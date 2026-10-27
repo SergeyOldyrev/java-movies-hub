@@ -28,10 +28,6 @@ public class MoviesStore {
         movies.add(movie);
     }
 
-    public boolean deleteMovie(int id) {
-        return movies.removeIf(movie -> movie.getId() == id);
-    }
-
     public int getNextId() {
         if (movies.isEmpty()) {
             return 1;
